@@ -1,0 +1,9 @@
+Revision history for Perl extension Apache::SdnFw.
+
+0.01  Mon Jun  8 21:28:55 2009
+	- original version; created by h2xs 1.23 with options
+		-X -n Apache::SdnFw
+
+0.90  Sat Mar 19 13:59:00 2011
+	- after years of exhaustive development, cleaning up things to share with 
+		rest of the world.

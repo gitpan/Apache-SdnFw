@@ -1,0 +1,55 @@
+---
+abstract: 'Perl extension for blah blah blah'
+author:
+  - 'Chris Sutton, E<lt>chris@smalldognet.comE<gt>'
+configure_requires:
+  Module::Build: 0.36
+generated_by: 'Module::Build version 0.3607'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
+name: Apache-SdnFw
+provides:
+  Apache::SdnFw:
+    file: lib/Apache/SdnFw.pm
+    version: 0.90
+  Apache::SdnFw::lib::Core:
+    file: lib/Apache/SdnFw/lib/Core.pm
+  Apache::SdnFw::lib::DB:
+    file: lib/Apache/SdnFw/lib/DB.pm
+  Apache::SdnFw::lib::Memcached:
+    file: lib/Apache/SdnFw/lib/Memcached.pm
+  Apache::SdnFw::object::dbdb:
+    file: lib/Apache/SdnFw/object/dbdb.pm
+  Apache::SdnFw::object::home:
+    file: lib/Apache/SdnFw/object/home.pm
+  SITECODE::object::employee:
+    file: lib/Apache/SdnFw/template/object/employee.pm
+  SITECODE::object::group:
+    file: lib/Apache/SdnFw/template/object/group.pm
+  SITECODE::object::me:
+    file: lib/Apache/SdnFw/template/object/me.pm
+requires:
+  Crypt::Blowfish: 0
+  Crypt::CBC: 0
+  DBD::Pg: 0
+  DBI: 0
+  Data::Dumper: 0
+  Date::Format: 0
+  Digest::MD5: 0
+  Google::SAML::Response: 0
+  LWP::UserAgent: 0
+  Lingua::EN::Numbers: 0
+  MIME::Base64: 0
+  MIME::QuotedPrint: 0
+  Net::FTP: 0
+  Net::SMTP::SSL: 0
+  Template: 0
+  Time::Ctime: 0
+  XML::Dumper: 0
+  XML::Simple: 0
+  perl: v5.6.1
+resources:
+  license: http://dev.perl.org/licenses/
+version: 0.90
