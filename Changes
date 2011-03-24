@@ -7,3 +7,6 @@ Revision history for Perl extension Apache::SdnFw.
 0.90  Sat Mar 19 13:59:00 2011
 	- after years of exhaustive development, cleaning up things to share with 
 		rest of the world.
+
+0.91  Sat Mar 19 13:59:00 2011
+	- remove incorrect files from dist package (Makefile and pm_to_blib)

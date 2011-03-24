@@ -1,38 +1,24 @@
-Apache-SdnFw version 0.90
+Apache-SdnFw version 0.91
 =========================
 
 This is a perl framework for developing dynamic systems using
 Template Toolkit and Postgresql.
 
+Before installing this module, you will need to install postgresql
+and apache (and mod_perl).
+
+See the CPAN man page for more info:
+
+http://search.cpan.org/~cjs/
+
 INSTALLATION
 
 To install this module type the following:
 
-   perl Build.PL
-   ./Build make
-   ./Build test
-   ./Build install
-
-DEPENDENCIES
-
-This module requires these other modules and libraries:
-	
-	Template
-	LWP::UserAgent
-	Crypt::CBC
-	Crypt::Blowfish
-	XML::Dumper
-	XML::Simple
-	Net::SMTP::SSL
-	Net::FTP
-	Digets::MD5
-	MIME::Base64
-	MIME::QuotedPrint
-	Date::Format
-	Data::Dumper
-	DBI
-	DBD::Pg
-	...and probably some others
+   perl Makefile.PL
+   make
+   make test
+   make install
 
 COPYRIGHT AND LICENCE
 

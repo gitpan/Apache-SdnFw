@@ -9,7 +9,7 @@ use Time::HiRes qw(time);
 use Date::Format;
 use Apache::SdnFw::lib::Core;
 
-our $VERSION = '0.90';
+our $VERSION = '0.91';
 
 sub handler {
 	my $r = shift;
@@ -319,41 +319,86 @@ sub get_params {
 
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
 
-Apache::SdnFw - Perl extension for blah blah blah
+Apache::SdnFw - Framework to build systems using perl, template toolkit and postgresql.
 
 =head1 SYNOPSIS
 
-  use Apache::SdnFw;
-  blah blah blah
+This is not a typical perl module that can be used in shell scripts, (though it can
+be used in shell scripts).  It is designed to be used in conjunction with apache
+via mod_perl so just doing a typical use Apache::SdnFw is not going to work.
 
-=head1 DESCRIPTION
+=head1 INSTALL
 
-Stub documentation for Apache::SdnFw, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+Before you Installing CPAN module you first need to install postgresql and apache.
+Below are how I compile apache and postgresql and get them configured.
 
-Blah blah blah.
+=head2 postgresql
 
-=head2 EXPORT
+ cd /root/src
+ wget http://wwwmaster.postgresql.org/redir/198/h/source/v8.2.20/postgresql-8.2.20.tar.gz
+ tar -zxf postgresql-8.2.20.tar.gz
+ cd postgresql-8.2.20
+ ./configure
+ make
+ make install
+ useradd postgres
+ mkdir /usr/local/pgsql/data
+ chown postgres /home/postgres
+ chown postgres /usr/local/pgsql/data
+ cd /root/src/postgresql-8.2.20/contrib/start-scripts/
+ cp linux /etc/rc.d/init.d/postgresql
+ # EDIT /etc/rc.d/init.d/postgresql and make it start at 80 instead of 98
+ # because it needs to start before apache
+ chkconfig --add postgresql
+ chmod +x /etc/rc.d/init.d/postgresql
+ su - postgres
+ cd /usr/local/pgsql/bin/
+ ./initdb /usr/local/pgsql/data
+ exit
+ service postgresql start
+ # make life easy so we don't need to muss with paths
+ rm -f /usr/bin/psql
+ ln -s /usr/local/pgsql/bin/psql /usr/bin
+ rm -f /usr/bin/createdb
+ ln -s /usr/local/pgsql/bin/createdb /usr/bin
+ rm -f /usr/bin/dropdb
+ ln -s /usr/local/pgsql/bin/dropdb /usr/bin
+ rm -f /usr/bin/pg_dump
+ ln -s /usr/local/pgsql/bin/pg_dump /usr/bin
 
-None by default.
+=head2 apache
 
-
-
-=head1 SEE ALSO
-
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
-
-If you have a mailing list set up for your module, mention it here.
-
-If you have a web site set up for your module, mention it here.
+ mkdir -p /root/src/apache
+ cd /root/src/apache
+ wget http://www.apache.org/dist/perl/mod_perl-1.30.tar.gz
+ wget http://archive.apache.org/dist/httpd/apache_1.3.37.tar.gz
+ wget http://www.modssl.org/source/mod_ssl-2.8.28-1.3.37.tar.gz
+ tar -zxf mod_perl-1.30.tar.gz
+ tar -zxf apache_1.3.37.tar.gz
+ tar -zxf mod_ssl-2.8.28-1.3.37.tar.gz
+ cd mod_perl-1.30
+ perl Makefile.PL APACHE_SRC=../apache_1.3.37/src DO_HTTPD=1 \
+ USE_APACI=1 PREP_HTTPD=1 EVERYTHING=1
+ make
+ make install
+ cd ../mod_ssl-2.8.28-1.3.37/
+ ./configure --with-apache=../apache_1.3.37 --with-ssl=SYSTEM \
+ --prefix=/usr/local/apache --enable-shared=ssl
+ cd ../apache_1.3.37
+ wget http://www.awe.com/mark/dev/mod_status_xml/dist/mod_status_xml.c
+ mv mod_status_xml.c src/modules/extra/
+ ./configure --activate-module=src/modules/perl/libperl.a --enable-module=env \
+ --enable-module=log_config --enable-module=log_agent --enable-module=log_referer \
+ --enable-module=mime --enable-module=status --enable-module=info --enable-module=dir \
+ --enable-module=cgi --enable-module=alias --enable-module=proxy --enable-module=rewrite \
+ --enable-module=access --enable-module=expires --enable-module=setenvif --enable-module=so \
+ --activate-module=src/modules/ssl/libssl.a --enable-module=dir --disable-shared=dir \
+ --add-module=src/modules/extra/mod_status_xml.c
+ make
+ make install
 
 =head1 AUTHOR
 

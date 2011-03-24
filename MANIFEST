@@ -1,4 +1,3 @@
-Build.PL
 Changes
 lib/Apache/SdnFw.pm
 lib/Apache/SdnFw/bin/apachectl
@@ -383,10 +382,8 @@ lib/Apache/SdnFw/tt/permission.tt
 lib/Apache/SdnFw/tt/search.tt
 lib/Apache/SdnFw/tt/system.tt
 lib/Apache/SdnFw/tt/uploadfile.tt
-Makefile
 Makefile.PL
 MANIFEST			This list of files
-META.yml
-pm_to_blib
 README
 t/Apache-SdnFw.t
+META.yml                                 Module meta-data (added by MakeMaker)
