@@ -48,6 +48,8 @@ fi
 # export some things we will need
 export HTTPD_ROOT HTTP_PORT HTTPS_PORT EUID
 
+PERL5LIB=/code; export PERL5LIB
+
 #echo "HTTPD_ROOT=$HTTPD_ROOT"
 #echo "HTTP_PORT=$HTTP_PORT"
 #echo "HTTPS_PORT=$HTTPS_PORT"

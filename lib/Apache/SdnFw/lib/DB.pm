@@ -386,7 +386,7 @@ sub db_q {
 		print F "\\.\n";
 		$sth->finish;
 		close F;
-	} elsif ($t eq 'csv') {
+	} elsif ($t eq 'csv' || $t eq 'text') {
 		my $cols = $sth->{NAME};
 		#croak "<pre>".Data::Dumper->Dump([$cols])."</pre>";
 		croak "undefined file field f in args" unless($args{f});
@@ -405,6 +405,12 @@ sub db_q {
 		}
 
 		open F, ">$args{f}";
+
+		# add some common stuff so we have to do less further on in the code
+		$s->{r}{file_path} = $args{f};
+		$s->{r}{filename} = $args{filename} || 'exportfile.csv';
+		$s->{content_type} = 'text/plain' if ($t eq 'text');
+		$s->{content_type} = 'application/csv' if ($t eq 'csv');
 		print F '"'.(join '","', @{$cols}).'"'."\n";
 		while (my @row = $sth->fetchrow_array ) {
 			my @out;

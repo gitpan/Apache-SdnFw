@@ -272,6 +272,7 @@ sub process {
 			$s->{r}{redirect} = $s->{redirect};
 			return;
 		}
+
 		# add the top menu to everything unless for some reason we are not text/html
 		if ($s->{content_type} eq 'text/html' && !$s->{in}{print}) {
 			$s->{r}{content} = $s->_content_add_menu();
@@ -284,6 +285,9 @@ sub process {
 				$s->{r}{content} .= $out;
 			} else {
 				$s->{r}{content} .= $s->{message} if ($s->{message});
+				if ($s->{o}{footer}) {
+					$s->tt($s->{o}{footer}, { s => $s });
+				}
 				$s->{r}{content} .= $s->{content};
 			}
 		} elsif ($s->{api}) {
@@ -309,7 +313,14 @@ sub process {
 				$s->{r}{head} .= $s->_head_add_js();
 			}
 			$s->{r}{head} .= $s->{head} if ($s->{head});
+			$s->{r}{head} .= $s->{o}{head} if ($s->{o}{head});
 			$s->{r}{body} = $s->{body} if ($s->{body});
+
+			if (defined($s->{o}{headers})) {
+				foreach my $k (keys %{$s->{o}{headers}}) {
+					$s->{r}{headers}{$k} = $s->{o}{headers}{$k};
+				}
+			}
 		}
 
 		return;
@@ -442,6 +453,34 @@ sub update_and_log {
 	}
 }
 
+sub in_to_hash {
+
+=head2 in_to_hash
+
+ my %hash = $s->in_to_hash($identifier,[$noblanks]);
+
+=cut 
+
+	my $s = shift;
+	my $identifier = shift;
+	my $noblanks = shift;
+
+	my %tmp;
+
+	foreach my $key (keys %{$s->{in}}) {
+		if ($key =~ m/^$identifier:(.+):(.+)$/) {
+			if ($noblanks) {
+				$tmp{$1}{$2} = $s->{in}{$key}
+					unless($s->{in}{$key} eq '');
+			} else {
+				$tmp{$1}{$2} = $s->{in}{$key};
+			}
+		}
+	}
+
+	return %tmp;
+}
+
 sub log {
 
 =head2 log
@@ -501,109 +540,6 @@ sub save_pdf {
 	delete $s->{r}{file_path};
 	delete $s->{r}{filename};
 	delete $s->{content_type}; 
-}
-
-sub avery_pdf {
-
-=head2 avery_pdf
-
- $s->avery_pdf($pdf_name,\@labels);
-
-=cut
-
-	my $s = shift;
-	my $pdf_name = shift;
-	my $data = shift;
-
-	my ($x, $y, $count);
-	my %cursor;
-
-	$cursor{x}{start} = .40; # indent from left edge
-	$cursor{x}{end} = 8.5;
-	$cursor{x}{inc} = (8.25/3); # 3 labels wide
-
-	$cursor{y}{start} = 11 - .80; # offset from top
-	$cursor{y}{end} = .5;
-	$cursor{y}{inc} = -1; # step rate 1 inch per label
-
-	# we can do 21 labels per page, so how many pages are we going to need?
-	$count = scalar @{$data};
-	my $pages = int(($count/21) + 0.99);
-	my $p = 1;
-
-	my $out = <<END;
-%!PS-Adobe-1.0
-%%DocumentFonts: Courier-Bold
-%%Dimensions: 0 0 612 792
-%%Title: avery 5160/5260 Address Label Generator
-%%Creator: avery perl script
-%%Pages: (atend)
-%%EndComments
-% -- CONVERT TO INCHES
-72 72 scale save
-%%EndProlog
-%%Page $p $p
-save
-%% FONT SIZE/COLOR
-% -- When scaled to inches, '1.0 scalefont' makes 
-% -- Helvetica-Bold letters .75 inch high
-% /Courier-Bold findfont
-/Helvetica-Narrow-Bold findfont
-0.150000 scalefont setfont 0 setgray
-END
-
-	$y = $cursor{y}{start};
-	$x = $cursor{x}{start};
-	my $ystep = $cursor{y}{inc}/4; # we are going to have 4 lines max
-	my $n = 0;
-	foreach my $ref (@{$data}) {
-		if ($n >= 21) {
-			$x = $cursor{x}{start};
-			$y = $cursor{y}{start};
-			$n = 0;
-			$p++;
-			$out .= <<END;
-showpage restore
-%%Page $p $p
-save
-%% FONT SIZE/COLOR
-% -- When scaled to inches, '1.0 scalefont' makes 
-% -- Helvetica-Bold letters .75 inch high
-% /Courier-Bold findfont
-/Helvetica-Narrow-Bold findfont
-0.150000 scalefont setfont 0 setgray
-END
-		}
-		my $yoff = 0;
-		foreach my $k (qw(name address address2)) {
-			if ($ref->{$k}) {
-				$out .= sprintf "%.2f %.2f moveto (%s) show\n",
-					$x, ($y + $yoff), $ref->{$k};
-				$yoff += $ystep;
-			}
-		}
-		$out .= sprintf "%.2f %.2f moveto (%s) show\n",
-			$x, ($y + $yoff), "$ref->{city}, $ref->{state} $ref->{zipcode}";
-
-		$x = $x + $cursor{x}{inc};
-		$n++;
-
-		if ($x >= $cursor{x}{end}) {
-			$y = $y + $cursor{y}{inc};	
-			$x = $cursor{x}{start};
-		}
-
-	}
-
-	$out .= <<END;
-showpage restore
-%%Trailer
-%%Pages: $pages
-END
-
-	$s->{content} = $out;
-	$s->{content_type} = 'text/plain';
-
 }
 
 sub xpdf {
@@ -691,8 +627,8 @@ sub pdf {
 
 	if (ref $args->{pages} eq 'ARRAY') {
 		my $pages = scalar @{$args->{pages}};
-		for my $i ( 0 .. $#{@{$args->{pages}}} ) {
-		#for my $i ( 0 .. $pages-1 ) {
+		#for my $i ( 0 .. $#{@{$args->{pages}}} ) {
+		for my $i ( 0 .. $pages-1 ) {
 			my $pg = $i+100;
 			open F, ">$tmpfile-$id-$pg.html";
 			print F $args->{pages}[$i];
@@ -939,9 +875,9 @@ sub run {
 	#$s->{content} .= "<pre>".Data::Dumper->Dump([$s])."</pre>"; return;
 	#$s->{content} .= "<pre>".Data::Dumper->Dump([\@INC])."</pre>"; return;
 
-	if ($s->{raw_path} eq '/logout') {
-		return unless($s->_authenticate());
-	}
+#	if ($s->{raw_path} eq '/logout') {
+#		return unless($s->_authenticate());
+#	}
 
 	# if we barf below anywhere we do not want to show anything but the raw error so set this
 	$s->{nomenu} = 1; 
@@ -970,6 +906,14 @@ sub run {
 
 	# this is a stupid hack because I could not create an object called return
 	$s->{object} = 'oreturn' if ($s->{object} eq 'return');
+
+	if ($s->{object} eq 'logout') {
+		$s->_authenticate();
+		$s->{function} = 'home' if ($s->{function} eq 'list');
+		$s->redirect(object => $s->{function},
+			function => 'list');
+		return;
+	}
 
 	if ($s->{env}{DEV} && $s->{object} eq 'debug') {
 		$s->{content} = Data::Dumper->Dump([$s]);
@@ -2502,14 +2446,17 @@ sub html_submit {
 
 =head2 html_submit
 
- my $html = $s->html_submit($name);
+ my $html = $s->html_submit($name,[$class]);
 
 =cut
 
 	my $s = shift;
 	my $name = shift;
+	my $class = shift;
 
-	return qq(<input type="submit" value="$name">);
+	my $c = qq( class="$class") if ($class);
+
+	return qq(<input type="submit" value="$name"$c>);
 }
 
 sub html_radio {
@@ -2603,6 +2550,56 @@ sub html_upload {
 	$key = "$s->{acfb}::$key" if ($s->{acfb});
 
 	my $str = qq(<input type="file" name="$key");
+	$str .= qq( size="$size") if ($size);
+	$str .= qq( id="$id") if ($id);
+	$str .= qq( class="$class") if ($class);
+	$str .= '>';
+
+	return $str;
+}
+
+sub html_input_email {
+
+=head2 html_input_email
+
+ my $html = $s->html_input_email($key,$value,[$size]);
+
+=cut
+	my $s = shift;
+	my $key = $s->escape(shift);
+	my $value = $s->escape(shift);
+	my $size = shift;
+	my $class = shift;
+	my $id = shift;
+
+	$key = "$s->{acfb}::$key" if ($s->{acfb});
+
+	my $str = qq(<input type="email" name="$key" value="$value" autocomplete="off");
+	$str .= qq( size="$size") if ($size);
+	$str .= qq( id="$id") if ($id);
+	$str .= qq( class="$class") if ($class);
+	$str .= '>';
+
+	return $str;
+}
+
+sub html_input_number {
+
+=head2 html_input_number
+
+ my $html = $s->html_input_number($key,$value,[$size]);
+
+=cut
+	my $s = shift;
+	my $key = $s->escape(shift);
+	my $value = $s->escape(shift);
+	my $size = shift;
+	my $class = shift;
+	my $id = shift;
+
+	$key = "$s->{acfb}::$key" if ($s->{acfb});
+
+	my $str = qq(<input type="number" name="$key" value="$value" autocomplete="off");
 	$str .= qq( size="$size") if ($size);
 	$str .= qq( id="$id") if ($id);
 	$str .= qq( class="$class") if ($class);
@@ -3004,6 +3001,25 @@ Adds commas to numbers.  1234 becomes 1,234.
 
 }
 
+sub format_time {
+
+=head2 format_time
+
+ my $string = $s->format_time($string);
+
+Takes a timestamp and returns HH:MM:SS
+
+=cut
+
+	my $s = shift;
+	my $timestamp = shift;
+
+	if ($timestamp =~ m/^(\d{4})-(\d{2})-(\d{2})\s(\d{2}):(\d{2}):(\d{2})/) {
+		return "$4:$5:$6";
+	} else {
+		return $timestamp;
+	}
+}
 sub format_ts {
 
 =head2 format_ts
@@ -3115,10 +3131,13 @@ Given 0.123, returns 12.3%.
 
 	my $s = shift;
 	my $number = shift;
+	my $d = shift;
+
+	$d = 1 unless(defined($d));
 
 	return $number unless($number);
 
-	$number = (sprintf "%.1f", $number*100).'%';
+	$number = (sprintf "%.${d}f", $number*100).'%';
 
 	return $number;
 }
@@ -3438,6 +3457,16 @@ sub add_action {
 	# so we can keep track if we have already added this thing
 	$s->{action_lookup}{$object}{$function} = 1;
 
+	if ($object eq 'logout') {
+		push @{$s->{actions}}, {
+			url => "$s->{ubase}/$object/$function",
+			title => $title,
+			class => $class,
+			};
+		
+		return;
+	}
+
 	if ($args{require_perm}) {
 		# only show if we have the require permission level defined
 		# for this object.  Mostly for overriding type things
@@ -3487,6 +3516,8 @@ sub check_permission {
 	my $s = shift;
 	my $object = shift;
 	my $function = shift;
+
+	return 1 if ($object eq 'logout');
 
 	if (defined($s->{employee}{object}{$object})) {
 		if (defined($s->{employee}{object}{$object}{$function})) {
@@ -3554,7 +3585,7 @@ sub encrypt {
 	my $s = shift;
 	my $data = shift;
 
-	my $k = 'ilikegreeneggsandhamsamiam';
+	my $k = $s->{env}{CRYPT_KEY} || 'ilikegreeneggsandhamsamiam';
 	my $cipher = new Crypt::CBC($k,'Blowfish');
 	my $out = $cipher->encrypt($data) if ($data);
 
@@ -3575,7 +3606,7 @@ sub decrypt {
 		$tmp .= pack('c',$c);
 	}
 
-	my $k = 'ilikegreeneggsandhamsamiam';
+	my $k = $s->{env}{CRYPT_KEY} || 'ilikegreeneggsandhamsamiam';
 	my $cipher = new Crypt::CBC($k,'Blowfish');
 	my $out = $cipher->decrypt($tmp) if ($tmp);
 
@@ -4710,7 +4741,7 @@ sub _content_add_menu {
 			",'arrayhash');
 
 		my $menu;
-		$s->tt('menu.tt', { s => $s }, \$menu);
+		$s->tt($s->{o}{menutemplate} || 'menu.tt', { s => $s }, \$menu);
 		return $menu;
 	}
 }
@@ -4718,41 +4749,96 @@ sub _content_add_menu {
 sub _head_add_css {
 	my $s = shift;
 
+	return if ($s->{no_css});
+
 	my $stylefile = 'style';
 	if ($s->{agent}) {
 		$stylefile = "$s->{agent}/$stylefile";
 	}
-	# what we are doing here is adding the timestamp on the file, so that 
-	# browsers will not cache a file which has potentially changed
-	my $v = (stat("$s->{plib}/css/$stylefile.css"))[9];
-	my $return = qq(\t<link rel="stylesheet" href="/css/$stylefile-r$v.css" />\n);
 
-	# check for a custom stylesheet
-	my $cv = (stat("/data/$s->{obase}/content/custom.css"))[9];
-	if ($cv) {
-		$return .= qq(\t<link rel="stylesheet" href="/custom-r$cv.css" />\n);
+	# in order to help with load times, just include the css directly
+	# instead of having them call the request the file separatly
+	my $sfile = "/data/$s->{obase}/content/css/$stylefile.css"; 
+
+	# if our object has a specific style file, then use that instead
+	$sfile = "/code/$s->{obase}/css/$s->{o}{css}.css" if ($s->{o}{css});
+
+
+	my $return;
+	if (-e $sfile) {
+		$return = "<style>";
+		open F, $sfile;
+		while (<F>) {
+			chomp;
+			$return .= $_;
+		}
+		close F;
+		$return .= "</style>\n";
 	}
-
-	if ($s->{agent} eq 'iphone') {
-		#$return .= qq(<meta name="viewport" content="width=320; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;"/>\n);
-		my $scale = ($s->{allow_zoom}) ? 'yes' : 'no';
-		$return .= qq(\t<meta name="viewport" content="user-scalable=$scale, width=device-width" />\n);
-	}
-
 	return $return;
+
+#	my $v = (stat("$s->{plib}/css/$stylefile.css"))[9];
+#	my $return = qq(\t<link rel="stylesheet" href="/css/$stylefile-r$v.css" />\n);
+#
+#	# check for a custom stylesheet
+#	my $cv = (stat("/data/$s->{obase}/content/custom.css"))[9];
+#	if ($cv) {
+#		$return .= qq(\t<link rel="stylesheet" href="/custom-r$cv.css" />\n);
+#	}
+#
+#	if ($s->{agent} eq 'iphone') {
+#		my $scale = ($s->{allow_zoom}) ? 'yes' : 'no';
+#		$return .= qq(\t<meta name="viewport" content="user-scalable=$scale, width=device-width" />\n);
+#	}
+#
+#	return $return;
+}
+
+sub add_js {
+	my $s = shift;
+	my $type = shift;
+
+	$s->{add_js}{$type} = 1;
+
+	return '';
 }
 
 sub _head_add_js {
 	my $s = shift;
 
-	my $return = qq(<script type="text/javascript" src="/js/prototype.js"></script>\n).
-		qq(<script type="text/javascript" src="/js/scriptaculous.js"></script>\n).
-		qq(<script type="text/javascript" src="/js/calendar_date_select/calendar_date_select.js"></script>\n).
-		qq(<script type="text/javascript" src="/js/calendar_date_select/format_iso_date.js"></script>\n);
+	if (defined($s->{add_js})) {
+		# always add prototype
+		$s->{add_js}{prototype} = 1;
+	}
+
+	my $return = qq(\n<script type="text/javascript" src="/js/prototype.js"></script>\n)
+		if ($s->{add_js}{prototype});
+
+	foreach my $k (keys %{$s->{add_js}}) {
+		next if ($k eq 'prototype');
+		if ($k eq 'scriptaculous') {
+			$return .= qq(<script type="text/javascript" src="/js/scriptaculous.js?effects,controls"></script>\n);
+		} elsif ($k eq 'calendar') {
+			$return .= qq(<script type="text/javascript" src="/js/calendar_date_select/calendar_date_select.js"></script>\n).
+			qq(<script type="text/javascript" src="/js/calendar_date_select/format_iso_date.js"></script>\n);
+		} else {
+			$return .= qq(<script type="text/javascript" src="/js/$k.js"></script>\n);
+		}
+	}
 
 	$return .= join "\n", @{$s->{head_js}} if (defined($s->{head_js}));
 
 	return $return;
+}
+
+sub html_caption_scroll {
+	my $s = shift;
+	my $caption = shift;
+	my $scroll = shift;
+	my $title = shift || 'scroll';
+	my $bmargin = shift || 5;
+
+	return qq|<div class="floatleft">$caption</div><div id="clink" class="captionlink"><a href="#" onClick="javascript:dscroll(\$('$scroll'),$bmargin); \$('clink').style.display = 'none'; return true;" class="action">$title</a></div>|;
 }
 
 sub html_display_link {
@@ -4781,6 +4867,8 @@ sub html_input_calendar {
 sub add_calendar {
 	my $s = shift;
 	my $id = shift;
+
+	$s->add_js('calendar');
 
 	return qq|id="$id" onclick="javascript: new CalendarDateSelect( \$('$id'), {close_on_click: true, embedded:true, year_range:1} );"|;
 }
@@ -4815,7 +4903,7 @@ sub _interface_auth {
 	croak "view not defined in object $s->{object}" unless($s->{o}{view});
 	croak "interface not defined in object $s->{object}" unless($s->{o}{interface});
 
-	if ($s->{raw_path} eq '/logout' && $s->{cookies}{IL}) {
+	if ($s->{object} eq 'logout' && $s->{cookies}{IL}) {
 		$s->db_q("
 			UPDATE $s->{o}{table} SET interface_cookie=NULL
 			WHERE interface_cookie=?
@@ -4823,8 +4911,8 @@ sub _interface_auth {
 			v => [ $s->{cookies}{IL} ],
 			);
 
-		$s->{raw_path} = '/';
-		$s->{uri} =~ s/logout//;
+		#$s->{raw_path} = '/';
+		#$s->{uri} =~ s/logout//;
 	}
 
 	SWITCH: {
@@ -4925,8 +5013,13 @@ sub _interface_cookie_key {
 	my $s = shift;
 	my %args = @_;
 
-	my $today = time2str('%x',time());
-	return md5_hex("84Fw$args{id}YouSuck$args{passwd}7f2$today");
+	my $expire;
+	if ($s->{env}{ETERNAL_COOKIE}) {
+		$expire = $s->{server_name}; # just add a little more to try and make this unique
+	} else {
+		$expire = time2str('%x',time());
+	}
+	return md5_hex("84Fw$args{id}YouSuck$args{passwd}7f2$expire");
 }
 
 sub _employee_permissions {
@@ -4999,7 +5092,7 @@ sub _authenticate {
 		}
 	}	
 
-	if ($s->{raw_path} eq '/logout' && $s->{cookies}{L}) {
+	if ($s->{object} eq 'logout' && $s->{cookies}{L}) {
 		$s->db_q("
 			UPDATE employees SET cookie=NULL
 			WHERE cookie=?
@@ -5007,8 +5100,8 @@ sub _authenticate {
 			v => [ $s->{cookies}{L} ],
 			);
 
-		$s->{raw_path} = '/';
-		$s->{uri} =~ s/logout//;
+		#$s->{raw_path} = '/';
+		#$s->{uri} =~ s/logout//;
 	}
 
 	SWITCH: {
@@ -5044,7 +5137,7 @@ sub _check_login {
 		my %hash = $s->db_q("
 			SELECT *
 			FROM employees_v_login
-			WHERE login=?
+			WHERE lower(login)=lower(?)
 			",'hash',
 			v => [ $s->{in}{login} ],
 			);
@@ -5190,8 +5283,18 @@ sub _cookie_key {
 	my $s = shift;
 	my %args = @_;
 
-	my $today = time2str('%x',time());
-	return md5_hex("23xf$args{employee_id}wwcl8w4$args{passwd}hqs$today");
+	# should we make the cookie expire today, or allow them to stay logged in
+	# forever?  Default to today unless we have a site config that says otherwise
+
+	my $expire;
+
+	if ($s->{env}{ETERNAL_COOKIE}) {
+		$expire = $s->{server_name}; # just add a little more to try and make this unique
+	} else {
+		$expire = time2str('%x',time());
+	}
+
+	return md5_hex("23xf$args{employee_id}wwcl8w4$args{passwd}hqs$expire");
 }
 
 1;

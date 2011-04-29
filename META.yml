@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Apache-SdnFw
-version:            0.91
+version:            0.92
 abstract:           Framework to build systems using perl, template toolkit and postgresql.
 author:
     - Chris Sutton <chris@smalldognet.com>

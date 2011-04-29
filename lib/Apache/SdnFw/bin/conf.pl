@@ -1,6 +1,4 @@
 #!/usr/bin/perl -lw
-# The -l option will print a newline after each print statement
-# vim: set ts=4 filetype=perl sts=4 sw=4 et ai tw=78 :
 use strict;
 
 print <<END;
@@ -53,11 +51,11 @@ my $group = ($ENV{HTTPD_GROUP}) ? $ENV{HTTPD_GROUP} : 'users';
 print 'User '.$user;
 print 'Group '.$group;
     
-print 'MinSpareServers 5';
-print 'MaxSpareServers 5';
-print 'StartServers 8';
-print 'MaxClients 20';
-print 'MaxRequestsPerChild 100';
+print 'MinSpareServers '.$ENV{APACHE_MIN_SERVERS} || '5';
+print 'MaxSpareServers '.$ENV{APACHE_MAX_SERVERS} || '5';
+print 'StartServers '.$ENV{APACHE_START_SERVERS} || '8';
+print 'MaxClients '.$ENV{APACHE_MAX_CLIENTS} || '20';
+print 'MaxRequestsPerChild '.$ENV{APACHE_MAX_REQUESTS} || '100';
 
 print 'ServerAdmin "root"';
 
@@ -124,17 +122,8 @@ END
 # Virtual Hosts
 #
 print <<END;
-<Location /perl-info>
-    SetHandler perl-script
-    PerlHandler Apache::Status
-    PerlSetVar StatusOptionsAll On
-</Location>
-
 <Location /server-status>
     SetHandler server-status
-</Location>
-<Location /server-info>
-    SetHandler server-info
 </Location>
 END
 

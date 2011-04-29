@@ -9,7 +9,7 @@ use Time::HiRes qw(time);
 use Date::Format;
 use Apache::SdnFw::lib::Core;
 
-our $VERSION = '0.91';
+our $VERSION = '0.92';
 
 sub handler {
 	my $r = shift;
@@ -39,7 +39,8 @@ sub handler {
 		HTTPS HTTPD_ROOT HTTP_COOKIE HTTP_REFERER HTTP_USER_AGENT DB_STRING
 		DB_USER BASE_URL DOCUMENT_ROOT REQUEST_METHOD QUERY_STRING HIDE_PERMISSION
 		GOOGLE_MAPS_KEY DEV FORCE_HTTPS GAUTH GUSER IP_LOGIN TITLE IPHONE DBDEBUG
-		OBJECT_BASE CONTENT_LENGTH CONTENT_TYPE APACHE_SERVER_NAME IP_ADDR)) {
+		OBJECT_BASE CONTENT_LENGTH CONTENT_TYPE APACHE_SERVER_NAME IP_ADDR ETERNAL_COOKIE
+		CRYPT_KEY)) {
 
 		$options{env}{$key} = ($r->dir_config($key) or $r->subprocess_env->{$key});
 	}
@@ -136,6 +137,13 @@ sub handler {
 	$r->content_type($s->{r}{content_type});
 	$r->headers_out->add('Content-Disposition' => "filename=$s->{r}{filename}")
 		if ($s->{r}{filename});
+
+	if (defined($s->{r}{headers})) {
+		foreach my $k (keys %{$s->{r}{headers}}) {
+			$r->headers_out->add($k => $s->{r}{headers}{$k});
+		}
+	}
+
 	$r->send_http_header;
 
 	if ($s->{r}{file_path}) {
@@ -169,13 +177,15 @@ sub handler {
 sub wrap_template {
 	my $s = shift;
 
-#		'<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">'.
+	my $favicon = qq(<link rel="shortcut icon" href="/favicon.ico">)
+		if (-e "/data/$s->{obase}/content/favicon.ico");
+
 	$s->{r}{content} = <<END;
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="utf-8" />
-	<link rel="shortcut icon" href="/favicon.ico">
+	$favicon
 $s->{r}{head}
 </head>
 <body $s->{r}{body}>

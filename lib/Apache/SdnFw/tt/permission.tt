@@ -1,13 +1,5 @@
+[% s.add_js('check') %]
 <script>
-function check (str,value) {
-	var r = new RegExp(str + ':');
-	var f = document.form;
-	for (var i = 0; i < f.elements.length; i++) {
-		if (f.elements[i].type == 'checkbox' && r.test(f.elements[i].name) ) {
-			f.elements[i].checked=value;
-		}
-	}
-}
 function kcheck (str,value) {
 	var r = new RegExp('f:\\d+:' + str);
 	var f = document.form;

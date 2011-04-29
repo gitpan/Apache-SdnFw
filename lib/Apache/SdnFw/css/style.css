@@ -171,6 +171,17 @@ th.shead {
 	background-color: #eee;
 	border: 1px solid #aaa;
 	}
+.captionlink {
+	float: right;
+	font-size: 12px;
+	padding-right: 10px;
+	}
+tbody.scroll td {
+	border: 0px solid #fff;
+	}
+tbody.scroll td:last-child {
+	padding-right: 20px;
+	}
 td {
 	border: 1px solid #aaa;
 	}
